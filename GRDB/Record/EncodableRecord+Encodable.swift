@@ -119,8 +119,8 @@ private class RecordEncoder<Record: EncodableRecord>: Encoder {
     fileprivate func encode<T>(_ value: T, forKey key: any CodingKey) throws where T: Encodable {
         if let data = value as? Data {
             let column = keyEncodingStrategy.column(forKey: key)
-            let dbValue = try Record.databaseDataEncodingStrategy(for: column).encode(data)
-            _persistenceContainer[column] = dbValue
+            let value = try Record.databaseDataEncodingStrategy(for: column).encode(data)
+            _persistenceContainer.updateValue(value, forColumn: column)
         } else if let date = value as? Date {
             let column = keyEncodingStrategy.column(forKey: key)
             let dbValue = Record.databaseDateEncodingStrategy(for: column).encode(date)

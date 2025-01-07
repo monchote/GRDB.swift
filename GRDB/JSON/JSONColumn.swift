@@ -3,7 +3,7 @@
 /// ## Overview
 ///
 /// `JSONColumn` has benefits over ``Column`` for database columns that
-/// contain JSON strings.
+/// contain JSON strings or JSONB blobs.
 ///
 /// It behaves like a regular `Column`, with all extra conveniences and
 /// behaviors of ``SQLJSONExpressible``.
@@ -33,7 +33,6 @@
 /// }
 ///
 /// try dbQueue.write { db in
-///     // In a real app, table creation should happen in a migration.
 ///     try db.create(table: "player") { t in
 ///         t.autoIncrementedPrimaryKey("id")
 ///         t.column("name", .text).notNull()

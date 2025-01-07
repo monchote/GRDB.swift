@@ -356,9 +356,15 @@ extension EncodableRecord {
 /// `PersistenceContainer` is the argument of the
 /// ``EncodableRecord/encode(to:)-k9pf`` method.
 public struct PersistenceContainer: Sendable {
+    enum PersistedValue {
+        case databaseValue(DatabaseValue)
+        case jsonbString(String)
+        case jsonbData(Data)
+    }
+    
     // The ordering of the OrderedDictionary helps generating always the same
     // SQL queries, and hit the statement cache.
-    private var storage: OrderedDictionary<CaseInsensitiveIdentifier, DatabaseValue>
+    private var storage: OrderedDictionary<CaseInsensitiveIdentifier, PersistedValue>
     
     /// The value associated with the given column.
     ///
@@ -370,9 +376,7 @@ public struct PersistenceContainer: Sendable {
             storage[CaseInsensitiveIdentifier(rawValue: column)]
         }
         set {
-            storage.updateValue(
-                newValue?.databaseValue ?? .null,
-                forKey: CaseInsensitiveIdentifier(rawValue: column))
+            updateValue(.databaseValue(newValue?.databaseValue ?? .null), forColumn: column)
         }
     }
     
@@ -414,6 +418,12 @@ public struct PersistenceContainer: Sendable {
     
     /// Values stored in the container, ordered like columns.
     var values: [DatabaseValue] { storage.values }
+    
+    func updateValue(_ newValue: PersistedValue, forColumn column: String) {
+        storage.updateValue(
+            newValue,
+            forKey: CaseInsensitiveIdentifier(rawValue: column))
+    }
     
     /// Returns ``DatabaseValue/null`` if column is not defined
     func databaseValue(at column: String) -> DatabaseValue {
@@ -485,22 +495,27 @@ public enum DatabaseDataEncodingStrategy: Sendable {
     /// Encodes `Data` columns as SQL text. Data must contain valid UTF8 bytes.
     case text
     
+    /// Encodes `Data`, interpreted as JSON data, as JSONB.
+    case jsonb
+    
     /// Encodes `Data` column as the result of the user-provided function.
     case custom(@Sendable (Data) -> (any DatabaseValueConvertible)?)
     
-    func encode(_ data: Data) throws -> DatabaseValue {
+    func encode(_ data: Data) throws -> PersistenceContainer.PersistedValue {
         switch self {
         case .deferredToData:
-            return data.databaseValue
+            return .databaseValue(data.databaseValue)
         case .text:
             guard let string = String(data: data, encoding: .utf8) else {
                 throw EncodingError.invalidValue(data, EncodingError.Context(
                     codingPath: [],
                     debugDescription: "Non-UTF8 data can't be encoded as text in the database"))
             }
-            return string.databaseValue
+            return .databaseValue(string.databaseValue)
+        case .jsonb:
+            return .jsonbData(data)
         case .custom(let format):
-            return format(data)?.databaseValue ?? .null
+            return .databaseValue(format(data)?.databaseValue ?? .null)
         }
     }
 }

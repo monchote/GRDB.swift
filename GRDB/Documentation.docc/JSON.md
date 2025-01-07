@@ -10,17 +10,17 @@ SQLite and GRDB can store and fetch JSON values in database columns. Starting iO
 
 ### JSON columns in the database schema
 
-It is recommended to store JSON values in text columns. In the example below, we create a ``Database/ColumnType/jsonText`` column with ``Database/create(table:options:body:)``:
+JSON values can be stored as JSON texts, or, starting SQLite 3.45.0 (see [Custom SQLite Builds](https://github.com/groue/GRDB.swift/blob/master/Documentation/CustomSQLiteBuilds.md)), as [JSONB](https://www.sqlite.org/json1.html#jsonb) binary representations. In the example below, we create a ``Database/ColumnType/jsonText`` column with ``Database/create(table:options:body:)``:
 
 ```swift
 try db.create(table: "player") { t in
     t.primaryKey("id", .text)
     t.column("name", .text).notNull()
-    t.column("address", .jsonText).notNull() // A JSON column
+    t.column("address", .jsonText).notNull() // A JSON text column
 }
 ```
 
-> Note: `.jsonText` and `.text` are equivalent, because both build a TEXT column in SQL. Yet the former better describes the intent of the column.
+> Note: `.jsonText` and `.text` are equivalent, because both build a TEXT column in SQL. Yet the former better describes the intent of the column. For JSONB columns, prefer `.jsonb` (equivalent to `.blob`):
 >
 > Note: SQLite JSON functions and operators are [documented](https://www.sqlite.org/json1.html#interface_overview) to throw errors if any of their arguments are binary blobs. That's the reason why it is recommended to store JSON as text.
 
